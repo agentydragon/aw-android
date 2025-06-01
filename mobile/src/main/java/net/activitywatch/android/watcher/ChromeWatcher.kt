@@ -41,7 +41,7 @@ class ChromeWatcher : AccessibilityService() {
     var lastTitle : String? = null
 
     override fun onCreate() {
-        ri = RustInterface(applicationContext)
+        ri = RustInterface.getInstance(applicationContext)
         ri?.createBucketHelper(bucket_id, "web.tab.current")
     }
 

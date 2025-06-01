@@ -14,11 +14,12 @@ import android.util.Log
 import net.activitywatch.android.databinding.ActivityMainBinding
 import net.activitywatch.android.fragments.TestFragment
 import net.activitywatch.android.fragments.WebUIFragment
+import net.activitywatch.android.fragments.SettingsFragment
 import net.activitywatch.android.watcher.UsageStatsWatcher
 
 private const val TAG = "MainActivity"
 
-const val baseURL = "http://127.0.0.1:5600"
+const val baseURL = AWPreferences.SERVER_URL
 
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, WebUIFragment.OnFragmentInteractionListener {
@@ -56,8 +57,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         binding.navView.setNavigationItemSelectedListener(this)
 
-        val ri = RustInterface(this)
-        ri.startServerTask(this)
+        // Only start the server if enabled in preferences
+        val prefs = AWPreferences(this)
+        if (prefs.isLocalServerEnabled()) {
+            val ri = RustInterface.getInstance(this)
+            ri.startServerTask(this)
+        } else {
+            Log.i(TAG, "Built-in server is disabled in settings")
+        }
 
         if (savedInstanceState != null) {
             return
@@ -124,6 +131,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_settings -> {
                 fragmentClass = WebUIFragment::class.java
                 url = "$baseURL/#/settings/"
+            }
+            R.id.nav_app_settings -> {
+                fragmentClass = SettingsFragment::class.java
             }
             R.id.nav_share -> {
                 Snackbar.make(binding.coordinatorLayout, "The share button was clicked, but it's not yet implemented!", Snackbar.LENGTH_LONG)

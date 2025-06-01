@@ -12,7 +12,11 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.threeten.bp.Instant
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
 
 private const val TAG = "RustInterface"
 
@@ -36,6 +40,16 @@ class RustInterface constructor(context: Context? = null) {
 
     companion object {
         var serverStarted = false
+        @Volatile
+        private var INSTANCE: RustInterface? = null
+        private var serverExecutor: ExecutorService? = null
+        private var serverFuture: Future<*>? = null
+        
+        fun getInstance(context: Context): RustInterface {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: RustInterface(context).also { INSTANCE = it }
+            }
+        }
     }
 
     private external fun initialize(): String
@@ -63,9 +77,9 @@ class RustInterface constructor(context: Context? = null) {
             }
 
             serverStarted = true
-            val executor = Executors.newSingleThreadExecutor()
+            serverExecutor = Executors.newSingleThreadExecutor()
             val handler = Handler(Looper.getMainLooper())
-            executor.execute {
+            serverFuture = serverExecutor?.submit {
                 // will not block the UI thread
 
                 // Start server
@@ -79,6 +93,25 @@ class RustInterface constructor(context: Context? = null) {
                 }
             }
             Log.w(TAG, "Server started")
+        }
+    }
+    
+    fun stopServerTask() {
+        if(serverStarted) {
+            Log.w(TAG, "Attempting to stop server...")
+            
+            // TODO: aw-server-rust doesn't currently support a shutdown endpoint
+            // Once it does, we should send a graceful shutdown request first
+            
+            // Cancel the server thread if it's still running
+            serverFuture?.cancel(true)
+            serverExecutor?.shutdownNow()
+            
+            serverStarted = false
+            serverExecutor = null
+            serverFuture = null
+            
+            Log.w(TAG, "Server stop requested")
         }
     }
 
